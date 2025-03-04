@@ -66,15 +66,6 @@ def get_fetch_env(d):
             cmd = 'export ' + var + '=\"%s\"; %s' % (val, cmd)
     return cmd
 
-def get_git_config(goprivate):
-    import re
-    hosts = set()
-    for priv in goprivate.split(','):
-        m = re.search(r'^\s*(?:\w+\://)?([^/]*)(?:/.*)?$', priv)
-        if m:
-            hosts.add(m.group(1))
-    return '; '.join(['git config --global url."ssh://git@%s/".insteadOf "https://%s/"' % (h, h) for h in hosts])
-
 do_prepare_build[network] = "${TASK_USE_NETWORK}"
 do_prepare_build[cleandirs] += "${S}/debian ${S}/.gocache ${S}/.gomodcache"
 do_prepare_build[vardepsexclude] += "GO111MODULE GOPROXY GIT_PROXY_COMMAND GIT_SSH SSH_AUTH_SOCK SSH_AGENT_PID"
@@ -85,14 +76,11 @@ do_prepare_build() {
     if [ "${GOPRECACHE}" = "1" ]; then
         ${@get_fetch_env(d)}
         E="${@isar_export_proxies(d)}"
-        export HOME="${WORKDIR}"
         export GO111MODULE="${GO111MODULE}"
         export GOPROXY="${GOPROXY}"
         export GOCACHE="${S}/.gocache"
         export GOMODCACHE="${S}/.gomodcache"
         export GOPRIVATE="${GOPRIVATE}"
-        # enforce clone via ssh
-        ${@get_git_config(d.getVar('GOPRIVATE'))}
         (cd ${S} && ${DEPLOY_DIR}/host-go/bin/go mod vendor)
     fi
 }
@@ -119,4 +107,3 @@ override_dh_strip:
 override_dh_auto_install:
 	install -D -m0755 "${PN}" "debian/${PN}/usr/bin/${PN}"
 EOF
-}
